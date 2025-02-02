@@ -61,7 +61,9 @@ library
     exposed-modules:  En
 
     -- Modules included in this library but not exported.
-    other-modules:    Pretty
+    other-modules:    
+        Synt
+        Pretty
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
