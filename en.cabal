@@ -58,11 +58,11 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  En
+    exposed-modules:  Eval
 
     -- Modules included in this library but not exported.
     other-modules:    
-        Synt
+        Syntax
         Pretty
 
     -- LANGUAGE extensions used by modules in this package.

@@ -1,4 +1,4 @@
-module Synt where
+module Syntax where
 
 type Name = String
 
@@ -18,18 +18,18 @@ data Exp                        -- e
     deriving (Show, Eq)
 
 data EExp                       -- ...e
-    = EESeg     Seg             -- 𝜎
-    | EEBinOp   Exp BinOp Exp   -- e 𝜔 ... 𝜔 e [𝜔 e]
+    = EESeg     [Seg]           -- [𝜎, ..., 𝜎]
+    | EEFold    Exp BinOp Exp   -- e 𝜔 ... 𝜔 e [𝜔 e]
     | EEVar     Name Exp        -- ...x{e}
     deriving (Show, Eq)
 
 data Seg                        -- 𝜎
-    = SOne      Exp             -- e
+    = SSng      Exp             -- e
     | SEll      Exp Exp         -- e,...,e
     deriving (Show, Eq)
 
 data Val
-    = VNum      Int
+    = VNum      Int             -- n
     | VCon      Name [Val]      -- c v...v
     | VCls      Env Exp         -- (𝜌,e)
     deriving (Show, Eq)
@@ -47,5 +47,5 @@ data Pat =
     PAny
     | PVar      Name
     | PVal      Val
-    | PCon      Name Val
+    | PCon      Name [Val]
     deriving (Show, Eq)

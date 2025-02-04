@@ -1,6 +1,6 @@
-module En where
+module Eval where
 
-import Synt
+import Syntax
 
 eval :: Env -> Exp -> Val
 -- Con
@@ -22,10 +22,10 @@ eval env xe@(EAbs {}) = VCls env xe
 eval env (EApp e1 e2) = 
     let c = eval env e1 in
         case c of
-        VCls env' (EAbs x e') -> 
-            let v' = eval env e2 in
-                eval ((x, v') : env') e'
-        _ -> error $ show e1 ++ " is not a closure."
+            VCls env' (EAbs x e') -> 
+                let v' = eval env e2 in
+                    eval ((x, v') : env') e'
+            _ -> error $ show e1 ++ " is not a closure."
 -- AppFix
 eval env (EFix e1) = case eval env e1 of
     VCls env' (EAbs f (EAbs x e')) -> eval ((f, eval env' (EAbs x e')) : env) (EApp fix e1)
@@ -50,7 +50,7 @@ eval env (ECase e (a:as)) =
 -- Ellipsis expressions!
 eval env (EExp ee) = case ee of
     EESeg s -> VNum 0
-    EEBinOp e1 o e2 -> VNum 0
+    EEFold e1 o e2 -> VNum 0
     EEVar x e -> VNum 0
 
 binop :: BinOp -> (Int, Int) -> Int
