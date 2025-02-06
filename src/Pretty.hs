@@ -11,12 +11,12 @@ import Prettyprinter
 import qualified Data.Text as T
 
 instance Pretty Exp where
-    pretty (EVar x)                 = pretty (T.pack x)
+    pretty (EVar x)                 = pretty x
     pretty (EVal v)                 = pretty v
     pretty (EBinOp e1 op e2)        = pretty e1 <+> pretty op <+> pretty e2
     pretty (EAbs x e)               = backslash <> pretty x <+> "->" <+> pretty e
     pretty (EApp e1 e2@(EBinOp {})) = pretty e1 <+> parens (pretty e2)
-    pretty (EApp e1 (EApp e2 e3))   = pretty e1 <+> parens (pretty $ EApp e2 e3)
+    pretty (EApp e1 e2@(EApp {}))   = pretty e1 <+> parens (pretty e2)
     pretty (EApp e1 e2)             = pretty e1 <+> pretty e2
     pretty (EFix e1)                = "fix" <+> parens (pretty e1)
     pretty (ELet x e1 e2)           = "let" <+> pretty x <+> equals <+> pretty e1 <+> "in" <+> pretty e2
@@ -26,7 +26,7 @@ instance Pretty Exp where
 instance Pretty EExp where
     pretty (EESeg s)                = brackets $ hsep $ punctuate comma $ map pretty s
     pretty (EEFold e1 op e2)        = pretty e1 <+> pretty op <+> "..." <+> pretty op <+> pretty e2
-    pretty (EEVar x e)              = pretty (T.pack x) <> braces (pretty e)
+    pretty (EEVar x e)              = pretty x <> braces (pretty e)
 
 instance Pretty Seg where
     pretty (SSng e)                 = pretty e
@@ -53,6 +53,12 @@ prettyAlts as                       = hsep $ punctuate semi (map prettyAlt as)
 
 instance Pretty Pat where
     pretty PAny                     = pretty (T.pack "_")
-    pretty (PVar x)                 = pretty (T.pack x)
+    pretty (PVar x)                 = pretty x
     pretty (PVal v)                 = pretty v
-    pretty (PCon x vs)              = pretty x <+> prettyVals vs
+    pretty (PCon x [])              = pretty x
+    pretty (PCon x ps)              = pretty x <+> prettyPats ps
+    pretty (PEll x i)               = let x' = pretty x in
+        brackets $ hsep $ punctuate comma [x' <> "1", "...", x' <> pretty i]
+
+prettyPats :: [Pat] -> Doc ann
+prettyPats ps                       = hsep $ map pretty ps
