@@ -18,7 +18,7 @@ instance Pretty Exp where
     pretty (EApp e1 e2@(EBinOp {})) = pretty e1 <+> parens (pretty e2)
     pretty (EApp e1 e2@(EApp {}))   = pretty e1 <+> parens (pretty e2)
     pretty (EApp e1 e2)             = pretty e1 <+> pretty e2
-    pretty (EFix e1)                = "fix" <+> parens (pretty e1)
+    pretty (EFix e1 e2)             = "fix" <+> pretty e1 <+> pretty e2
     pretty (ELet x e1 e2)           = "let" <+> pretty x <+> equals <+> pretty e1 <+> "in" <+> pretty e2
     pretty (ECase e as)             = "case" <+> pretty e <+> "of" <+> braces (prettyAlts as)
     pretty (EExp e)                 = pretty e
@@ -35,6 +35,7 @@ instance Pretty Seg where
 instance Pretty Val where
     pretty (VNum n)                 = pretty n
     pretty (VCon x vs)              = pretty x <+> prettyVals vs
+    pretty (VList vs)               = brackets $ hsep $ punctuate comma $ map pretty vs
     pretty (VCls env e)             = parens $ pretty env <> comma <+> pretty e
 
 prettyVals :: [Val] -> Doc ann
@@ -44,6 +45,7 @@ instance Pretty BinOp where
     pretty Add                      = pretty (T.pack "+")
     pretty Sub                      = pretty (T.pack "-")
     pretty Mul                      = pretty (T.pack "*")
+    pretty Cons                     = pretty (T.pack ":")
 
 prettyAlt :: Alt -> Doc ann
 prettyAlt (p, e)                    = pretty p <+> "->" <+> pretty e
@@ -57,6 +59,7 @@ instance Pretty Pat where
     pretty (PVal v)                 = pretty v
     pretty (PCon x [])              = pretty x
     pretty (PCon x ps)              = pretty x <+> prettyPats ps
+    pretty (PCons x xs)             = pretty x <> pretty Cons <> pretty xs
     pretty (PEll x i)               = let x' = pretty x in
         brackets $ hsep $ punctuate comma [x' <> "1", "...", x' <> pretty i]
 

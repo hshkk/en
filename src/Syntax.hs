@@ -14,7 +14,7 @@ data Exp                        -- e
     | EBinOp    Exp BinOp Exp   -- e 𝜔 e
     | EAbs      Var Exp         -- \x -> e
     | EApp      Exp Exp         -- e e
-    | EFix      Exp
+    | EFix      Exp Exp
     | ELet      Var Exp Exp     -- let x=e in e 
     | ECase     Exp [Alt]       -- case e of {p->e;...;p->e}
     | EExp      EExp            -- ...e
@@ -34,6 +34,7 @@ data Seg                        -- 𝜎
 data Val
     = VNum      Int             -- n
     | VCon      Var [Val]       -- c v...v
+    | VList     [Val]
     | VCls      Env Exp         -- (𝜌,e)
     deriving (Show, Eq)
 
@@ -41,7 +42,7 @@ data BinOp
     = Add
     | Sub
     | Mul
---  | Cons
+    | Cons
     deriving (Show, Eq)
 
 type Alt = (Pat, Exp)
@@ -51,5 +52,6 @@ data Pat =
     | PVar      Var             -- x
     | PVal      Val             -- n
     | PCon      Var [Pat]       -- c p...p
+    | PCons     Var Var         -- x:xs
     | PEll      EVar IVar       -- [...x{1}, ..., ...x{...i}]
     deriving (Show, Eq)
