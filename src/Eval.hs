@@ -1,6 +1,7 @@
 module Eval where
 
 import Syntax
+import AntiUnification
 
 import Data.Maybe
 
@@ -9,7 +10,7 @@ eval :: Env -> Exp -> Val
 eval _ (EVal v) = v
 -- Var
 eval env (EVar x) = case lookup x env of
-    Just v -> v
+    Just v  -> v
     Nothing -> error $ x ++ " isn't binded in the current environment."
 -- BinOp
 eval env (EBinOp e1 op e2) =
@@ -18,21 +19,20 @@ eval env (EBinOp e1 op e2) =
         case (v1, v2) of
             (VNum n1, VNum n2) -> VNum (bopnum op (n1, n2))
             (v, VList vs) -> VList (boplist op (v, vs))
-            _ -> error $ "No binary operations exist for the given values." ++ show v1 ++ show v2
+            _ -> error "No binary operations exist for the given values."
 -- Abs
 eval env xe@(EAbs {}) = VCls env xe
 -- AppF
 eval env (EApp e1 e2) =
     let v = eval env e1 in
         case v of
-            VCls env' (EAbs x e') ->
-                let v' = eval env e2 in
-                    eval ((x, v') : env') e'
+            VCls env' (EAbs x e') -> let v' = eval env e2 in eval ((x, v') : env') e'
             _ -> error $ show e1 ++ " isn't a closure."
 -- AppFix
 eval env (EFix e1 e2) = case eval env e1 of
     -- TODO: Rewrite this!
     VCls _ (EAbs _ (EAbs _ _)) -> eval env (EApp (EApp fix e1) e2)
+        where fix = EAbs "f" (EApp (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))) (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))))
     _ -> error $ show e1 ++ " isn't a closure."
 -- Let
 eval env (ELet x e1 e2) = let v' = eval env e1 in eval ((x, v') : env) e2
@@ -41,10 +41,7 @@ eval _ (ECase _ []) = error "There weren't any successful pattern matches."
 eval env (ECase e ((p, e'):as)) =
     let v = eval env e
         envs = pmatch v p in
-        if isJust envs then
-            eval (fromJust envs ++ env) e'
-        else
-            eval env (ECase e as)
+        if isJust envs then eval (fromJust envs ++ env) e' else eval env (ECase e as)
 -- Ellipsis expressions!
 eval env (EExp ee) = case ee of
     EESeg ss -> VList (evalseg env ss)
@@ -90,9 +87,9 @@ pmatch v p = pre v p >>= \r -> case v of   -- Check PVar/PAny, which are applied
         PVal v' -> case v' of
             VNum n' -> if n == n' then Just [] else Nothing
             _ -> Nothing
-        PCon _ _ -> Nothing
-        PCons _ _ -> Nothing
-        PEll _ _ -> Nothing
+        PCon    {} -> Nothing
+        PCons   {} -> Nothing
+        PEll    {} -> Nothing
         _ -> Just r
     VCon x vs -> case p of
         PVal v' -> case v' of
@@ -100,16 +97,16 @@ pmatch v p = pre v p >>= \r -> case v of   -- Check PVar/PAny, which are applied
             _ -> Nothing
         -- PCon
         PCon x' ps -> if x == x' then concat <$> pmatchall vs ps else Nothing
-        PCons _ _ -> Nothing
-        PEll _ _ -> Nothing
+        PCons   {} -> Nothing
+        PEll    {} -> Nothing
         _ -> Just r
     VList vs -> case p of
         PVal v' -> case v' of
             VList v's -> if vs == v's then Just [] else Nothing
             _ -> Nothing
-        PCon _ _ -> Nothing
+        PCon    {} -> Nothing
         PCons x xs -> if null vs then Nothing else Just [(x, head vs), (xs, VList (tail vs))]
-        PEll _ _ -> Nothing     -- TODO: Implement this!
+        PEll    {} -> Nothing     -- TODO: Implement this!
         _ -> Just r
     _ -> error "The given value isn't matchable to a pattern."
 
@@ -119,5 +116,6 @@ pmatchall [] [] = Just []
 pmatchall (v:vs) (p:ps) = (:) <$> pmatch v p <*> pmatchall vs ps
 pmatchall _ _ = Nothing
 
-fix :: Exp
-fix = EAbs "f" (EApp (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))) (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))))
+slice :: Int -> Int -> [a] -> [a]
+slice a b = if a < b then slice' a b else reverse . slice' b a
+    where slice' a b = take (b - a + 1) . drop (a - 1)
