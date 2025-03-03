@@ -1,7 +1,8 @@
 module Eval where
 
-import Syntax
 import AntiUnification
+import Patterns
+import Syntax
 
 import Data.Maybe
 
@@ -47,7 +48,7 @@ eval env (EExp ee) = case ee of
     EESeg ss -> VList (evalseg env ss)
     EEFold e1 o e2 -> VNum 0    -- TODO: Implement this!
     EEVar x e -> case lookup x env of
-        Just (VList vs) -> vs !! arith (eval env e)
+        Just (VList vs) -> vs !! (arith (eval env e) - 1)
         Just _ -> error $ x ++ "isn't binded to a list."
         Nothing -> error $ x ++ " isn't binded in the current environment."
 
@@ -97,15 +98,7 @@ pmatch v p = pre v p >>= \r -> case v of   -- Check PVar/PAny, which are applied
             _ -> Nothing
         -- PCon
         PCon x' ps -> if x == x' then concat <$> pmatchall vs ps else Nothing
-        PCons   {} -> Nothing
-        PEll    {} -> Nothing
-        _ -> Just r
-    VList vs -> case p of
-        PVal v' -> case v' of
-            VList v's -> if vs == v's then Just [] else Nothing
-            _ -> Nothing
-        PCon    {} -> Nothing
-        PCons x xs -> if null vs then Nothing else Just [(x, head vs), (xs, VList (tail vs))]
+        PCons x' xs -> if null vs || x /= "Cons" then Nothing else Just [(x', head vs), (xs, head $ tail vs)]
         PEll    {} -> Nothing     -- TODO: Implement this!
         _ -> Just r
     _ -> error "The given value isn't matchable to a pattern."

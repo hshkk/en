@@ -62,9 +62,10 @@ library
 
     -- Modules included in this library but not exported.
     other-modules:    
-        Syntax
-        Pretty
         AntiUnification
+        Patterns
+        Pretty
+        Syntax
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
