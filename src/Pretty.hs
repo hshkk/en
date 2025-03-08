@@ -6,6 +6,7 @@
 module Pretty where
 
 import Syntax
+import SyntaxExtras
 import Prettyprinter
 import qualified Data.Text as T
 
@@ -33,9 +34,10 @@ instance Pretty Seg where
 
 instance Pretty Val where
     pretty (VNum n)                 = pretty n
-    pretty (VCon "Nil" _)           = brackets $ ""
-    pretty (VCon "Cons" (v:vs))     = pretty v <> pretty Cons <> prettyVals vs
-    pretty (VCon x vs)              = pretty x <+> prettyVals vs
+    pretty (VCon c)                 = pretty c
+    pretty (VList vs)               = brackets $ hsep $ punctuate comma $ map pretty vs
+    pretty (VApp v1 v2@(VApp {}))   = pretty v1 <+> parens (pretty v2)
+    pretty (VApp v1 v2)             = pretty v1 <+> pretty v2
     pretty (VCls env e)             = parens $ pretty env <> comma <+> pretty e
 
 prettyVals :: [Val] -> Doc ann

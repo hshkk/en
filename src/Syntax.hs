@@ -1,6 +1,7 @@
 module Syntax where
 
 type Var = String
+type CVar = String
 -- "Ellipsis variables"
 type EVar = String
 type IVar = String
@@ -33,7 +34,8 @@ data Seg                        -- 𝜎
 
 data Val
     = VNum      Int             -- n
-    | VCon      Var [Val]       -- c v...v
+    | VCon      CVar            -- ↓
+    | VApp      Val Val         -- c v...v
     | VCls      Env Exp         -- (𝜌,e)
     deriving (Show, Eq)
 
@@ -50,7 +52,7 @@ data Pat =
     PAny
     | PVar      Var             -- x
     | PVal      Val             -- n
-    | PCon      Var [Pat]       -- c p...p
+    | PCon      CVar [Pat]      -- c p...p
     | PCons     Var Var         -- x:xs
     | PEll      EVar IVar       -- [...x{1}, ..., ...x{...i}]
     deriving (Show, Eq)

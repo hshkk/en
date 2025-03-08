@@ -1,8 +1,8 @@
 module Eval where
 
 import AntiUnification
-import Patterns
-import Syntax
+import Syntax hiding (VCon, VApp)
+import SyntaxExtras
 
 import Data.Maybe
 
@@ -19,7 +19,7 @@ eval env (EBinOp e1 op e2) =
         v2 = eval env e2 in
         case (v1, v2) of
             (VNum n1, VNum n2) -> VNum (bopnum op (n1, n2))
-            (v, VList vs) -> VList (boplist op (v, vs))
+            (v, VList vs)      -> VList (boplist op (v, vs))
             _ -> error "No binary operations exist for the given values."
 -- Abs
 eval env xe@(EAbs {}) = VCls env xe
@@ -39,47 +39,45 @@ eval env (EFix e1 e2) = case eval env e1 of
 eval env (ELet x e1 e2) = let v' = eval env e1 in eval ((x, v') : env) e2
 -- Case
 eval _ (ECase _ []) = error "There weren't any successful pattern matches."
-eval env (ECase e ((p, e'):as)) =
+eval env (ECase e ((p, e'):alts)) =
     let v = eval env e
         envs = pmatch v p in
-        if isJust envs then eval (fromJust envs ++ env) e' else eval env (ECase e as)
+        if isJust envs then eval (fromJust envs ++ env) e' else eval env (ECase e alts)
 -- Ellipsis expressions!
-eval env (EExp ee) = case ee of
-    EESeg ss -> VList (evalseg env ss)
-    EEFold e1 o e2 -> VNum 0    -- TODO: Implement this!
-    EEVar x e -> case lookup x env of
-        Just (VList vs) -> vs !! (arith (eval env e) - 1)
-        Just _ -> error $ x ++ "isn't binded to a list."
-        Nothing -> error $ x ++ " isn't binded in the current environment."
+eval env (EExp e) = case e of
+    EESeg ss       -> VList (map (evalseg env) ss)
+    EEFold e1 o ek -> let p = phi [e1, ek] in eval env p -- TODO: Implement this!
+    EEVar x e      -> case lookup x env of
+        Just (VList vs) -> let n = arith $ eval env e in vs !! (n - 1)
+        Just _          -> error $ x ++ " isn't binded to a list."
+        Nothing         -> error $ x ++ " isn't binded in the current environment."
 
-evalseg :: Env -> [Seg] -> [Val]
-evalseg _ [] = []
-evalseg env (s:ss) = case s of
-    SSng e -> eval env e : evalseg env ss
-    SEll e1 en -> [VNum 0]      -- TODO: Implement this!
+evalseg :: Env -> Seg -> Val
+evalseg env (SSng e)     = eval env e
+evalseg env (SEll e1 ek) = VNum 0 -- TODO: Implement this!
 
 arith :: Val -> Int
 arith v = case v of
     VNum n -> n
-    _ -> error $ show v ++ "isn't an arithmetic expression."
+    _      -> error $ show v ++ " isn't an arithmetic expression."
 
 bopnum :: BinOp -> (Int, Int) -> Int
 bopnum op (v1, v2) = case op of
     Add -> v1 + v2
     Sub -> v1 - v2
     Mul -> v1 * v2
-    _ -> error $ "You can't use " ++ show op ++ " here."
+    _   -> error $ "You can't use " ++ show op ++ " here."
 
 boplist :: BinOp -> (a, [a]) -> [a]
 boplist op (v1, v2) = case op of
     Cons -> v1 : v2
-    _ -> error $ "You can't use " ++ show op ++ " here."
+    _    -> error $ "You can't use " ++ show op ++ " here."
 
 pre :: Val -> Pat -> Maybe Env
 pre v p = case p of
     -- PVar
     PVar x -> Just [(x, v)]
-    _ -> Just []
+    _      -> Just []
 
 -- Matches a value against a pattern.
 pmatch :: Val -> Pat -> Maybe Env
@@ -92,23 +90,23 @@ pmatch v p = pre v p >>= \r -> case v of   -- Check PVar/PAny, which are applied
         PCons   {} -> Nothing
         PEll    {} -> Nothing
         _ -> Just r
-    VCon x vs -> case p of
+    VCons c vs -> case p of
         PVal v' -> case v' of
-            VCon x' v's -> if x == x' && vs == v's then Just [] else Nothing
+            VCons c' vs' -> if c == c' && vs == vs' then Just [] else Nothing
             _ -> Nothing
-        -- PCon
-        PCon x' ps -> if x == x' then concat <$> pmatchall vs ps else Nothing
-        PCons x' xs -> if null vs || x /= "Cons" then Nothing else Just [(x', head vs), (xs, head $ tail vs)]
-        PEll    {} -> Nothing     -- TODO: Implement this!
+        PCon c' ps -> if c == c' then concat <$> pmatchall vs ps else Nothing
+        PCons x xs -> case v of
+            VList vs -> if null vs then Nothing else Just [(x, a), (xs, VList b)]
+                where
+                    a = head vs
+                    b = tail vs
+            _ -> Nothing
+        PEll    {} -> Nothing   -- TODO: Implement this!
         _ -> Just r
-    _ -> error "The given value isn't matchable to a pattern."
+    _ -> error $ "The given value isn't matchable to a pattern. " ++ show v
 
 -- Matches every argument of a constructor against the arguments of a constructor pattern.
 pmatchall :: [Val] -> [Pat] -> Maybe [Env]
 pmatchall [] [] = Just []
 pmatchall (v:vs) (p:ps) = (:) <$> pmatch v p <*> pmatchall vs ps
 pmatchall _ _ = Nothing
-
-slice :: Int -> Int -> [a] -> [a]
-slice a b = if a < b then slice' a b else reverse . slice' b a
-    where slice' a b = take (b - a + 1) . drop (a - 1)
