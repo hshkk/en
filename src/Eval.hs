@@ -1,8 +1,8 @@
 module Eval where
 
-import AntiUnification
+import AntiUnification (phi)
 import Syntax hiding (VCon, VApp)
-import SyntaxExtras
+import SyntaxExtras hiding (listify, tuplify)
 
 import Data.Maybe
 
@@ -39,10 +39,10 @@ eval env (EFix e1 e2) = case eval env e1 of
 eval env (ELet x e1 e2) = let v' = eval env e1 in eval ((x, v') : env) e2
 -- Case
 eval _ (ECase _ []) = error "There weren't any successful pattern matches."
-eval env (ECase e ((p, e'):alts)) =
+eval env (ECase e ((p, ek):alts)) =
     let v = eval env e
         envs = pmatch v p in
-        if isJust envs then eval (fromJust envs ++ env) e' else eval env (ECase e alts)
+        if isJust envs then eval (fromJust envs ++ env) ek else eval env (ECase e alts)
 -- Ellipsis expressions!
 eval env (EExp e) = case e of
     EESeg ss       -> VList (map (evalseg env) ss)
@@ -103,7 +103,7 @@ pmatch v p = pre v p >>= \r -> case v of   -- Check PVar/PAny, which are applied
             _ -> Nothing
         PEll    {} -> Nothing   -- TODO: Implement this!
         _ -> Just r
-    _ -> error $ "The given value isn't matchable to a pattern. " ++ show v
+    _ -> error $ "The given value isn't matchable to a pattern."
 
 -- Matches every argument of a constructor against the arguments of a constructor pattern.
 pmatchall :: [Val] -> [Pat] -> Maybe [Env]

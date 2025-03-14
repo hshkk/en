@@ -1,4 +1,7 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+
 module Syntax where
+import Data.Data (Data)
 
 type Var = String
 type CVar = String
@@ -19,32 +22,32 @@ data Exp                        -- e
     | ELet      Var Exp Exp     -- let x=e in e 
     | ECase     Exp [Alt]       -- case e of {p->e;...;p->e}
     | EExp      EExp            -- ...e
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
 data EExp                       -- ...e
     = EESeg     [Seg]           -- [𝜎, ..., 𝜎]
     | EEFold    Exp BinOp Exp   -- e 𝜔 ... 𝜔 e [𝜔 e]
     | EEVar     EVar Exp        -- ...x{e}
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
 data Seg                        -- 𝜎
     = SSng      Exp             -- e
     | SEll      Exp Exp         -- e,...,e
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
 data Val
     = VNum      Int             -- n
     | VCon      CVar            -- ↓
     | VApp      Val Val         -- c v...v
     | VCls      Env Exp         -- (𝜌,e)
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
 data BinOp
     = Add
     | Sub
     | Mul
     | Cons
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)
 
 type Alt = (Pat, Exp)
 
@@ -55,4 +58,4 @@ data Pat =
     | PCon      CVar [Pat]      -- c p...p
     | PCons     Var Var         -- x:xs
     | PEll      EVar IVar       -- [...x{1}, ..., ...x{...i}]
-    deriving (Show, Eq)
+    deriving (Show, Eq, Data)

@@ -78,7 +78,7 @@ library
         text
 
     -- Directories containing source files.
-    hs-source-dirs:   src
+    hs-source-dirs:   src, src/phi, src/syn
 
     -- Base language which the package is written in.
     default-language: Haskell2010

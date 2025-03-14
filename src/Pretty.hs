@@ -7,6 +7,7 @@ module Pretty where
 
 import Syntax
 import SyntaxExtras
+
 import Prettyprinter
 import qualified Data.Text as T
 
@@ -20,12 +21,12 @@ instance Pretty Exp where
     pretty (EApp e1 e2)             = pretty e1 <+> pretty e2
     pretty (EFix e1 e2)             = "fix" <+> pretty e1 <+> pretty e2
     pretty (ELet x e1 e2)           = "let" <+> pretty x <+> equals <+> pretty e1 <+> "in" <+> pretty e2
-    pretty (ECase e as)             = "case" <+> pretty e <+> "of" <+> braces (prettyAlts as)
+    pretty (ECase e alts)           = "case" <+> pretty e <+> "of" <+> braces (prettyAlts alts)
     pretty (EExp e)                 = pretty e
 
 instance Pretty EExp where
     pretty (EESeg s)                = brackets $ hsep $ punctuate comma $ map pretty s
-    pretty (EEFold e1 op e2)        = pretty e1 <+> pretty op <+> "..." <+> pretty op <+> pretty e2
+    pretty (EEFold e1 op ek)        = pretty e1 <+> pretty op <+> "..." <+> pretty op <+> pretty ek
     pretty (EEVar x e)              = pretty x <> let e' = pretty e in (if length (show e') > 1 then braces else id) e'
 
 instance Pretty Seg where
@@ -53,14 +54,13 @@ prettyAlt :: Alt -> Doc ann
 prettyAlt (p, e)                    = pretty p <+> "->" <+> pretty e
 
 prettyAlts :: [Alt] -> Doc ann
-prettyAlts as                       = hsep $ punctuate semi (map prettyAlt as)
+prettyAlts alts                       = hsep $ punctuate semi (map prettyAlt alts)
 
 instance Pretty Pat where
     pretty PAny                     = pretty (T.pack "_")
     pretty (PVar x)                 = pretty x
     pretty (PVal v)                 = pretty v
-    pretty (PCon x [])              = pretty x
-    pretty (PCon x ps)              = pretty x <+> prettyPats ps
+    pretty (PCon c ps)              = pretty c <+> prettyPats ps
     pretty (PCons x xs)             = pretty x <> pretty Cons <> pretty xs
     pretty (PEll x i)               = let x' = pretty x in
         brackets $ hsep $ punctuate comma [x' <> "1", "...", x' <> pretty i]
