@@ -6,7 +6,7 @@
 module Pretty where
 
 import Syntax
-import SyntaxExtras
+import SyntaxPatterns
 
 import Prettyprinter
 import qualified Data.Text as T
@@ -14,9 +14,10 @@ import qualified Data.Text as T
 instance Pretty Exp where
     pretty (EVar x)                 = pretty x
     pretty (EVal v)                 = pretty v
-    pretty (EBinOp e1 op e2)        = pretty e1 <+> pretty op <+> pretty e2
+    pretty (ECon c)                 = pretty c
+    pretty (EBin op e1 e2)          = pretty e1 <+> pretty op <+> pretty e2
     pretty (EAbs x e)               = backslash <> pretty x <+> "->" <+> pretty e
-    pretty (EApp e1 e2@(EBinOp {})) = pretty e1 <+> parens (pretty e2)
+    pretty (EApp e1 e2@(EBin {}))   = pretty e1 <+> parens (pretty e2)
     pretty (EApp e1 e2@(EApp {}))   = pretty e1 <+> parens (pretty e2)
     pretty (EApp e1 e2)             = pretty e1 <+> pretty e2
     pretty (EFix e1 e2)             = "fix" <+> pretty e1 <+> pretty e2
@@ -35,16 +36,14 @@ instance Pretty Seg where
 
 instance Pretty Val where
     pretty (VNum n)                 = pretty n
-    pretty (VCon c)                 = pretty c
     pretty (VList vs)               = brackets $ hsep $ punctuate comma $ map pretty vs
-    pretty (VApp v1 v2@(VApp {}))   = pretty v1 <+> parens (pretty v2)
-    pretty (VApp v1 v2)             = pretty v1 <+> pretty v2
+    pretty (VCons c vs)             = pretty c <+> hsep (map pretty vs)
     pretty (VCls env e)             = parens $ pretty env <> comma <+> pretty e
 
 prettyVals :: [Val] -> Doc ann
 prettyVals vs                       = hsep $ map pretty vs
 
-instance Pretty BinOp where
+instance Pretty Bin where
     pretty Add                      = pretty (T.pack "+")
     pretty Sub                      = pretty (T.pack "-")
     pretty Mul                      = pretty (T.pack "*")

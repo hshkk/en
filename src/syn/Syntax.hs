@@ -1,6 +1,7 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 
 module Syntax where
+
 import Data.Data (Data)
 
 type Var = String
@@ -14,8 +15,9 @@ type Bind = (Var, Val)          -- 𝛽 x=v
 
 data Exp                        -- e
     = EVar      Var             -- x
+    | ECon      CVar            -- c
     | EVal      Val             -- v
-    | EBinOp    Exp BinOp Exp   -- e 𝜔 e
+    | EBin      Bin Exp Exp     -- e 𝜔 e
     | EAbs      Var Exp         -- \x -> e
     | EApp      Exp Exp         -- e e
     | EFix      Exp Exp
@@ -26,8 +28,8 @@ data Exp                        -- e
 
 data EExp                       -- ...e
     = EESeg     [Seg]           -- [𝜎, ..., 𝜎]
-    | EEFold    Exp BinOp Exp   -- e 𝜔 ... 𝜔 e [𝜔 e]
-    | EEVar     EVar Exp        -- ...x{e}
+    | EEFold    Exp Bin Exp     -- e 𝜔 ... 𝜔 e [𝜔 e]
+    | EEVar     EVar Exp        -- ẍ{e}
     deriving (Show, Eq, Data)
 
 data Seg                        -- 𝜎
@@ -37,12 +39,11 @@ data Seg                        -- 𝜎
 
 data Val
     = VNum      Int             -- n
-    | VCon      CVar            -- ↓
-    | VApp      Val Val         -- c v...v
+    | VCons     CVar [Val]      -- c v...v
     | VCls      Env Exp         -- (𝜌,e)
     deriving (Show, Eq, Data)
 
-data BinOp
+data Bin
     = Add
     | Sub
     | Mul
@@ -57,5 +58,5 @@ data Pat =
     | PVal      Val             -- n
     | PCon      CVar [Pat]      -- c p...p
     | PCons     Var Var         -- x:xs
-    | PEll      EVar IVar       -- [...x{1}, ..., ...x{...i}]
+    | PEll      EVar IVar       -- [ẍ{1}, ..., ẍ{ï}]
     deriving (Show, Eq, Data)

@@ -58,15 +58,17 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Eval
-
-    -- Modules included in this library but not exported.
-    other-modules:    
+    exposed-modules:  
         AntiUnification
+        Evaluator
+        Operators
         PatternInference
         Pretty
         Syntax
-        SyntaxExtras
+        SyntaxPatterns
+
+    -- Modules included in this library but not exported.
+    -- other-modules:    
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:

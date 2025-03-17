@@ -1,35 +1,41 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module SyntaxExtras where
+module SyntaxPatterns (
+    pattern (:+:),
+    pattern (:-:),
+    pattern (:*:),
+    pattern (:::),
+    pattern ECons, 
+    pattern VList
+) where
 
 import Syntax
 
 -- Shorthand patterns for binary operations:
 
 pattern (:+:) :: Exp -> Exp -> Exp
-pattern x :+: y = EBinOp x Add y
+pattern x :+: y = EBin Add x y
 
 pattern (:-:) :: Exp -> Exp -> Exp
-pattern x :-: y = EBinOp x Sub y
+pattern x :-: y = EBin Sub x y
 
 pattern (:*:) :: Exp -> Exp -> Exp
-pattern x :*: y = EBinOp x Mul y
+pattern x :*: y = EBin Mul x y
 
 pattern (:::) :: Exp -> Exp -> Exp
-pattern x ::: y = EBinOp x Cons y
+pattern x ::: y = EBin Cons x y
 
 -- Shorthand patterns for constructors:
 
--- AppC
-pattern VCons :: String -> [Val] -> Val
-pattern VCons c vs <- (tuplify -> Just (c, vs))
-    where VCons c vs = foldl VApp (VCon c) vs
+pattern ECons :: String -> [Exp] -> Exp
+pattern ECons c exps <- (tuplify -> Just (c, exps))
+    where ECons c exps = foldl EApp (ECon c) exps
 
 -- Flattens a constructor into a tuple of its name and arguments.
-tuplify :: Val -> Maybe (String, [Val])
-tuplify (VCon c) = Just (c, [])
-tuplify (VApp v1 v2) = (\(c, vs) -> (c, vs ++ [v2])) <$> tuplify v1
+tuplify :: Exp -> Maybe (String, [Exp])
+tuplify (ECon c) = Just (c, [])
+tuplify (EApp v1 v2) = (\(c, vs) -> (c, vs ++ [v2])) <$> tuplify v1
 tuplify _ = Nothing
 
 -- Shorthand patterns for lists:
