@@ -1,11 +1,11 @@
 module Evaluator where
 
+import Data.Maybe (isJust, fromJust)
+
 import AntiUnification (phi)
 import Operators
 import Syntax
 import SyntaxPatterns
-
-import Data.Maybe
 
 eval :: Env -> Exp -> Val
 -- Con
@@ -36,7 +36,7 @@ eval env (EApp e1 e2) =
             VCons c vs -> VCons c (vs ++ [v'])
             -- AppF
             VCls env' (EAbs x e') -> eval ((x, v') : env') e'
-            _ -> error $ show e1 ++ " isn't a closure."
+            _ -> error $ show e1 ++ " is unable to be applied to " ++ show e2 ++ "."
 -- AppFix
 eval env (EFix e1 e2) = case eval env e1 of
     -- TODO: Rewrite this!

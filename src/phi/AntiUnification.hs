@@ -1,13 +1,13 @@
 module AntiUnification where
 
-import Syntax
-
 import Data.Char (ord, chr)
 import Data.Data (toConstr)
 import Data.Function (on)
 import Data.List (nub)
 
 import Prelude hiding (exp)
+
+import Syntax
 
 type Exps = [Exp]
 type Subs = [(Exps, Exp)]
