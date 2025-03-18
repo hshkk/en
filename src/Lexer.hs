@@ -16,9 +16,6 @@ idn = Token.identifier lexer
 symbol :: String -> Parser String
 symbol = Token.symbol lexer
 
-int :: Parser Int
-int = fromIntegral <$> Token.integer lexer
-
 parens :: Parser a -> Parser a
 parens = Token.parens lexer
 

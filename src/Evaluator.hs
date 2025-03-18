@@ -47,9 +47,9 @@ eval env (EFix e1 e2) = case eval env e1 of
 eval env (ELet x e1 e2) = let v' = eval env e1 in eval ((x, v') : env) e2
 -- Case
 eval _ (ECase _ []) = error "There weren't any successful pattern matches."
-eval env (ECase e ((p, ek):alts)) =
+eval env (ECase e ((pk, ek):alts)) =
     let v = eval env e
-        envs = pmatch v p in
+        envs = pmatch v pk in
         if isJust envs then eval (fromJust envs ++ env) ek else eval env (ECase e alts)
 -- Ellipsis expressions!
 eval env (EExp e) = case e of
@@ -74,7 +74,7 @@ try v p = case p of
 
 -- Matches a value against a pattern.
 pmatch :: Val -> Pat -> Maybe Env
-pmatch v p = try v p >>= \r -> case v of
+pmatch v p = try v p >>= \var -> case v of
     VNum n -> case p of
         PVal v' -> case v' of
             VNum n' -> if n == n' then Just [] else Nothing
@@ -82,7 +82,7 @@ pmatch v p = try v p >>= \r -> case v of
         PCon    {} -> Nothing
         PCons   {} -> Nothing
         PEll    {} -> Nothing
-        _ -> Just r
+        _ -> Just var
     VCons c vs -> case p of
         PVal v' -> case v' of
             VCons c' vs' -> if c == c' && vs == vs' then Just [] else Nothing
@@ -92,7 +92,7 @@ pmatch v p = try v p >>= \r -> case v of
             VList vs -> if null vs then Nothing else ((<*>) . fmap (++)) (pmatch (head vs) x) (pmatch (VList $ tail vs) xs)
             _ -> Nothing
         PEll    {} -> Nothing   -- TODO: Implement this!
-        _ -> Just r
+        _ -> Just var
     _ -> error "The given value isn't matchable to a pattern."
 
 -- Matches every argument of a constructor against the arguments of a constructor pattern.

@@ -13,7 +13,6 @@ import Lexer hiding (lexer)
 import Pretty ()
 import Syntax
 import SyntaxPatterns
-import Data.Functor (($>))
 
 type Decl = (Maybe Var, Exp)
 data Repl = EVTO | AST
@@ -54,7 +53,7 @@ parseAbs = do
     return $ EAbs x e
 
 parseApp :: Parser Exp
-parseApp = chainl1 (choice [parens parseExp, parseExp']) (spaces $> EApp)
+parseApp = chainl1 (choice [parens parseExp, parseExp']) (EApp <$ spaces)
 
 parseFix :: Parser Exp
 parseFix = do
