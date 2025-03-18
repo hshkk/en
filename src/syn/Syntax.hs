@@ -57,6 +57,6 @@ data Pat =
     | PVar      Var             -- x
     | PVal      Val             -- n
     | PCon      CVar [Pat]      -- c p...p
-    | PCons     Var Var         -- x:xs
+    | PCons     Pat Pat         -- x:xs
     | PEll      EVar IVar       -- [ẍ{1}, ..., ẍ{ï}]
     deriving (Show, Eq, Data)

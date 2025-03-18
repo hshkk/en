@@ -89,7 +89,7 @@ pmatch v p = try v p >>= \r -> case v of
             _ -> Nothing
         PCon c' ps -> if c == c' then concat <$> pmatchall vs ps else Nothing
         PCons x xs -> case v of
-            VList vs -> if null vs then Nothing else Just [(x, head vs), (xs, VList $ tail vs)]
+            VList vs -> if null vs then Nothing else ((<*>) . fmap (++)) (pmatch (head vs) x) (pmatch (VList $ tail vs) xs)
             _ -> Nothing
         PEll    {} -> Nothing   -- TODO: Implement this!
         _ -> Just r

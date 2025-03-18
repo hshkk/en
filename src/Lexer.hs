@@ -22,6 +22,9 @@ int = fromIntegral <$> Token.integer lexer
 parens :: Parser a -> Parser a
 parens = Token.parens lexer
 
+braces :: Parser a -> Parser a 
+braces = Token.braces lexer
+
 brackets :: Parser a -> Parser a
 brackets = Token.brackets lexer
 

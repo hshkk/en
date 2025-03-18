@@ -13,16 +13,17 @@ import Lexer hiding (lexer)
 import Pretty ()
 import Syntax
 import SyntaxPatterns
+import Data.Functor (($>))
 
 type Decl = (Maybe Var, Exp)
 data Repl = EVTO | AST
 
 parseExp :: Parser Exp
-parseExp = buildExpressionParser tableBin $ 
-    choice [parens parseExp, parseApp, parseExp']
+parseExp = buildExpressionParser tableBin $
+    choice [parseFix, parseApp, parseExp']
 
 parseExp' :: Parser Exp
-parseExp' = choice [parseAbs, parseLet, parseVal]
+parseExp' = choice [parseAbs, parseLet, parseCase, parseVal]
 
 parseVal :: Parser Exp
 parseVal = try parseLit <|> parseVar
@@ -32,12 +33,12 @@ parseLit = choice
     [ EVal . VNum . read <$> many1 digit <* spaces
     , EVal (VCons "True"  []) <$ reserved "True"
     , EVal (VCons "False" []) <$ reserved "False"
-    , brackets parseList]
+    , EVal <$> brackets parseList]
 
-parseList :: Parser Exp
+parseList :: Parser Val
 parseList = do
     vs <- sepBy parseExp (symbol ",")
-    return $ EVal $ VList (map (eval []) vs)
+    return $ VList (map (eval []) vs)
 
 parseVar :: Parser Exp
 parseVar = do
@@ -53,10 +54,14 @@ parseAbs = do
     return $ EAbs x e
 
 parseApp :: Parser Exp
-parseApp = do
-    f    <- parseExp'
-    exps <- many $ choice [parens parseExp, parseExp']
-    return $ foldl EApp f exps
+parseApp = chainl1 (choice [parens parseExp, parseExp']) (spaces $> EApp)
+
+parseFix :: Parser Exp
+parseFix = do
+    reserved "fix"
+    e1 <- choice $ map parens [parseExp, parseExp']
+    e2 <- choice [parens parseExp, parseExp']
+    return $ EFix e1 e2
 
 tableBin :: OperatorTable String () Identity Exp
 tableBin = [[ifxl $ parseBin "+" Add
@@ -78,6 +83,35 @@ parseLet = do
     reserved "in"
     b <- parseExp
     return $ ELet x a b
+
+parseCase :: Parser Exp
+parseCase = do
+    reserved "case"
+    e    <- parseExp
+    reserved "of"
+    alts <- braces $ sepBy parseAlternate (symbol ";")
+    return $ ECase e alts
+
+parseAlternate :: Parser Alt
+parseAlternate = do
+    p <- parsePattern
+    reservedOp "->"
+    e <- parseExp
+    return (p, e)
+
+parsePattern :: Parser Pat
+parsePattern = choice
+    [ symbol "_" >> return PAny
+    , PVal . VNum . read <$> many1 digit <* spaces
+    , PVal (VCons "True"  []) <$ reserved "True"
+    , PVal (VCons "False" []) <$ reserved "False"
+    , PVal <$> brackets parseList
+    , idn >>= \x ->
+        if not (null x) && isUpper (head x)
+        then many parsePattern >>= \ps -> return $ PCon x ps
+        else return $ PVar x
+    , parens $ parsePattern >>= \x -> reservedOp ":" >> parsePattern >>= \xs -> return $ PCons x xs
+    , parens parsePattern]
 
 parseDecl :: Parser Decl
 parseDecl = try parseDecl' <|> (parseExp >>= \e -> return (Nothing, e)) <* eof
