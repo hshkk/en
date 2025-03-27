@@ -6,10 +6,13 @@ module Ellipses.SyntaxPatterns (
     pattern (:-:),
     pattern (:*:),
     pattern (:::),
-    pattern ECons, 
+    pattern VNum,
+    pattern ECons,
     pattern EList,
     pattern VList
 ) where
+
+import Data.Maybe (listToMaybe)
 
 import Ellipses.Syntax
 
@@ -26,6 +29,21 @@ pattern x :*: y = EBin Mul x y
 
 pattern (:::) :: Exp -> Exp -> Exp
 pattern x ::: y = EBin Cons x y
+
+pattern VNum :: Int -> Val
+pattern VNum n <- (intify -> Just n)
+    where VNum n = peanoify n
+
+intify :: Val -> Maybe Int
+intify (VCons "Zero" []) = Just 0
+intify (VCons "Succ" n)  = (intify =<< listToMaybe n) >>= \k -> return $  1 + k
+intify (VCons "Pred" n)  = (intify =<< listToMaybe n) >>= \k -> return $ -1 + k
+intify _ = Nothing
+
+peanoify :: Int -> Val
+peanoify 0         = VCons "Zero" []
+peanoify n | n > 0 = VCons "Succ" [peanoify $ n - 1]
+peanoify n         = VCons "Pred" [peanoify $ n + 1]
 
 -- Shorthand patterns for constructors as expressions.
 

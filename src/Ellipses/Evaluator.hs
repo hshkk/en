@@ -101,14 +101,6 @@ num v = error $ show v ++ " isn't an arithmetic expression."
 
 pmatch :: Val -> Pat -> Maybe Env
 pmatch v p = try v p >>= \var -> case v of
-    VNum n -> case p of
-        PVal v' -> case v' of
-            VNum n' -> if n == n' then Just [] else Nothing
-            _ -> Nothing
-        PCon    {} -> Nothing
-        PCons   {} -> Nothing
-        PEll    {} -> Nothing
-        _ -> Just var
     VCons c vs -> case p of
         PVal v' -> case v' of
             VCons c' vs' -> if c == c' && vs == vs' then Just [] else Nothing
@@ -123,7 +115,7 @@ pmatch v p = try v p >>= \var -> case v of
             l@(VList vs) -> Just [(x, l), (n, VNum $ length vs)]
             _ -> Nothing
         _ -> Just var
-    _ -> error "The given value isn't matchable to a pattern."
+    _ -> Just var
     where
         try :: Val -> Pat -> Maybe Env
         try v (PVar x) = Just [(x, v)]

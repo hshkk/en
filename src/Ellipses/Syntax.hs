@@ -49,8 +49,7 @@ data Seg                        -- 𝜎
     deriving (Show, Eq, Data)
 
 data Val
-    = VNum      Int             -- n
-    | VCons     CVar [Val]      -- c v...v
+    = VCons     CVar [Val]      -- c v...v
     | VCls      Env Exp         -- (𝜌,e)
     deriving (Show, Eq, Data)
 
