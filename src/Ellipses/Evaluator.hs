@@ -1,7 +1,6 @@
 module Ellipses.Evaluator where
 
 import Control.Applicative (liftA2)
-import Data.List (transpose)
 import Data.Maybe (isJust, fromJust)
 
 import Ellipses.Bins
@@ -45,7 +44,9 @@ eval env (EApp e1 e2) =
 eval env (EFix e1 e2) = case eval env e1 of
     -- TODO: Rewrite this!
     VCls _ (EAbs _ (EAbs _ _)) -> eval env (EApp (EApp fix e1) e2)
-        where fix = EAbs "f" (EApp (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))) (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))))
+        where
+            fix :: Exp
+            fix = EAbs "f" (EApp (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))) (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))))
     _ -> error $ show e1 ++ " isn't a closure."
 -- Let
 eval env (ELet x e1 e2) = let v' = eval env e1 in eval ((x, v') : env) e2
@@ -53,43 +54,48 @@ eval env (ELet x e1 e2) = let v' = eval env e1 in eval ((x, v') : env) e2
 eval _ (ECase _ []) = error "There weren't any successful pattern matches."
 eval env (ECase e ((pk, ek):alts)) =
     let v = eval env e
-        envs = pmatch v pk in
-        if isJust envs then eval (fromJust envs ++ env) ek else eval env (ECase e alts)
+        env' = pmatch v pk in
+        if isJust env' then eval (fromJust env' ++ env) ek else eval env (ECase e alts)
 -- Ellipsis expressions!
 eval env (EExp e) = case e of
-    EESeg ss        -> VList (map (evalseg env) ss)
-    EEFold op e1 ek ->
-        let inf = cphi [e1, ek]
-            phi = fst inf
-            slc = map (slcToList env) (snd inf) in eval env $ foldWithK op phi slc
-    EEVar x e       -> case lookup x env of
-        Just (VList vs) -> let n = arith $ eval env e in vs !! (n - 1)
+    EESeg ss -> VList (cat $ map (evals env) ss)
+        where
+            cat :: [Val] -> [Val]
+            cat [] = []
+            cat ((VList vs):vls) = vs ++ cat vls
+            cat v = v
+    EEFold op e1 ek -> infer env e1 ek $ foldOverK op
+    EEVar x e -> case lookup x env of
+        Just (VList vs) -> let n = num $ eval env e in vs !! (n - 1)
         Just _          -> error $ x ++ " isn't binded to a list."
         Nothing         -> error $ x ++ " isn't binded in the current environment."
 
-evalseg :: Env -> Seg -> Val
-evalseg env (SSng e)     = eval env e
-evalseg env (SEll e1 ek) = VNum 0 -- TODO: Implement this!
+-- Evaluation rules for list segments:
 
--- Maps a given φ to a list of list slices, then collapses it into a single expression.
-phifold :: ([Exp] -> Exp) -> Exp -> [[Val]] -> Exp
-phifold f phi vss = f $ foldl EApp phi . map EVal <$> (transpose . cut) vss
-    where cut xss = map (take . minimum $ map length xss) xss
+evals :: Env -> Seg -> Val
+evals env (SSng e)     = VList [eval env e]
+evals env (SEll e1 ek) = infer env e1 ek zipWithK
 
-foldWithK :: Bin -> Exp -> [[Val]] -> Exp
-foldWithK op = phifold (foldl1 $ EBin op)
+infer :: Env -> Exp -> Exp -> (Phi -> [Slice] -> Exp) -> Val
+infer env e1 ek f =
+    let inf = cphi [e1, ek]
+        phi = fst inf
+        slc = map (render env) (snd inf) in eval env $ f phi slc
 
-zipWithK :: Exp -> [[Val]] -> Exp
-zipWithK = phifold EList
-
-slcToList :: Env -> (Exp, Exp, Var) -> [Val]
-slcToList env (a, b, x) = case eval env (EVar x) of
-    VList vs -> slice (arith $ eval env a) (arith $ eval env b) vs
+-- Processes an a/b-slice, yielding the corresponding sublist.
+render :: Env -> ABSlice -> Slice
+render env (a, b, x) = case eval env (EVar x) of
+    VList vs -> slice (num $ eval env a) (num $ eval env b) vs
     _ -> error $ x ++ " isn't binded to a list."
 
-arith :: Val -> Int
-arith (VNum n) = n
-arith v = error $ show v ++ " isn't an arithmetic expression."
+slice :: Int -> Int -> [a] -> [a]
+slice a b | all (> 0) [a, b] = if a > b then reverse . slice' b a else slice' a b
+    where slice' a b = take (b - a + 1) . drop (a - 1)
+slice _ _ = error "a >= 1, b >= 1 must hold for a list slice (a, b, x)."
+
+num :: Val -> Int
+num (VNum n) = n
+num v = error $ show v ++ " isn't an arithmetic expression."
 
 -- Pattern matching rules:
 
@@ -112,7 +118,10 @@ pmatch v p = try v p >>= \var -> case v of
             VList [] -> Nothing
             VList vs -> liftA2 (++) (pmatch (head vs) x) (pmatch (VList $ tail vs) xs)
             _ -> Nothing
-        PEll    {} -> Nothing   -- TODO: Implement this!
+        PEll x n -> case v of
+            VList [] -> Nothing -- TODO: Should ellipsis expressions match with empty lists?
+            l@(VList vs) -> Just [(x, l), (n, VNum $ length vs)]
+            _ -> Nothing
         _ -> Just var
     _ -> error "The given value isn't matchable to a pattern."
     where

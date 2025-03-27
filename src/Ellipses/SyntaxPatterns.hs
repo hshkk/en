@@ -41,16 +41,6 @@ tuplify _ = Nothing
 
 -- Shorthand patterns for lists as either expressions or values.
 
-pattern EListNil :: Exp
-pattern EListNil = ECons "Nil" []
-
-pattern EListCons :: Exp -> Exp -> Exp
-pattern EListCons x xs = ECons "Cons" [x, xs]
-
-pattern EList :: [Exp] -> Exp
-pattern EList exps <- (listify -> Just exps)
-    where EList exps = foldr EListCons EListNil exps
-
 pattern VListNil :: Val
 pattern VListNil = VCons "Nil" []
 
@@ -58,16 +48,22 @@ pattern VListCons :: Val -> Val -> Val
 pattern VListCons x xs = VCons "Cons" [x, xs]
 
 pattern VList :: [Val] -> Val
-pattern VList vs <- (listify' -> Just vs)
+pattern VList vs <- (listify -> Just vs)
     where VList vs = foldr VListCons VListNil vs
 
 -- Flattens a list constructor into a list of its arguments.
-listify :: Exp -> Maybe [Exp]
-listify EListNil = Just []
-listify (EListCons x xs) = (x:) <$> listify xs
+listify :: Val -> Maybe [Val]
+listify VListNil = Just []
+listify (VListCons x xs) = (x:) <$> listify xs
 listify _ = Nothing
 
-listify' :: Val -> Maybe [Val]
-listify' VListNil = Just []
-listify' (VListCons x xs) = (x:) <$> listify' xs
-listify' _ = Nothing
+pattern EList :: [Exp] -> Exp
+pattern EList exps <- (expify -> Just exps)
+    where EList exps = EExp (EESeg $ map SSng exps)
+
+-- Identical to listify other than restricting convertible list segments to singular expressions,
+-- as the companion pattern synonym doesn't produce ellipsis expressions.
+expify :: Exp -> Maybe [Exp]
+expify (EExp (EESeg [])) = Just []
+expify (EExp (EESeg ((SSng x):xs))) = (x:) <$> expify (EExp $ EESeg xs)
+expify _ = Nothing

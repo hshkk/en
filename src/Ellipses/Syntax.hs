@@ -4,16 +4,25 @@ module Ellipses.Syntax where
 
 import Data.Data (Data)
 
+-- Standard type synonyms:
+-- x
 type Var  = String
+-- c
 type CVar = String
--- "Ellipsis variables"
+
+type Env  = [Bind]              -- 𝜌, {𝛽,...,𝛽}
+type Bind = (Var, Val)          -- 𝛽, x=v
+
+type Alt = (Pat, Exp)           -- p->e
+
+-- Ellipsis type synonyms:
+-- ẍ{n̈}
 type EVar = String
 type IVar = String
 
-type Env  = [Bind]              -- 𝜌 {𝛽,...,𝛽}
-type Bind = (Var, Val)          -- 𝛽 x=v
-
-type Alt = (Pat, Exp)
+type Phi = Exp
+type ABSlice = (Exp, Exp, EVar)
+type Slice = [Val]
 
 data Exp                        -- e
     = EVar      Var             -- x

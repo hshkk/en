@@ -5,7 +5,7 @@ import Ellipses.SyntaxPatterns
 
 (>+<) :: Val -> Val -> Val
 (>+<) (VNum m) (VNum n) = VNum $ m + n
-(>+<) x y = error $ "(+) is undefined for the given values." ++ show x ++ " " ++ show y
+(>+<) _ _ = error "(+) is undefined for the given values."
 
 (>-<) :: Val -> Val -> Val
 (>-<) (VNum m) (VNum n) = VNum $ m - n

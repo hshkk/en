@@ -1,4 +1,4 @@
-module Ellipses.AntiUnification (antiunify, Exps, Subs) where
+module Ellipses.AntiUnification (antiunify, Sub) where
 
 import Data.Data (toConstr)
 import Data.Function (on)
@@ -6,16 +6,15 @@ import Data.List (nub)
 
 import Ellipses.Syntax
 
-type Exps = [Exp]
-type Subs = [(Exps, Exp)]
+type Sub = ([Exp], Exp)
 
 -- Instead of returning fst of antiunify' like in Fig. 2 (6), Østvold (2004), 
 -- a function (φ) is constructed with the created substitutions.
-antiunify :: Exps -> (Exp, Subs)
+antiunify :: [Exp] -> (Exp, [Sub])
 antiunify exps = (\(a, b, _) -> (a, b)) $ antiunify' exps [] 1
 
 -- Adapted from Fig. 2 of "A function reconstruction of anti-unification", Østvold (2004).
-antiunify' :: Exps -> Subs -> Int -> (Exp, Subs, Int)
+antiunify' :: [Exp] -> [Sub] -> Int -> (Exp, [Sub], Int)
 antiunify' [] _ _ = error "An empty sequence of expressions isn't allowed."
 antiunify' exps subs n =
     let e = head exps in case exps of
@@ -29,7 +28,7 @@ antiunify' exps subs n =
         _ -> mkSub exps subs n
 
 -- Anti-unification over constructor arguments, assuming constructor homogeneity.
-antifold :: Exps -> Subs -> Int -> (Exp, Subs, Int)
+antifold :: [Exp] -> [Sub] -> Int -> (Exp, [Sub], Int)
 antifold [] _ _ = error "An empty sequence of expressions isn't allowed."
 antifold exps subs n
     = case head exps of
@@ -47,10 +46,10 @@ antifold exps subs n
                    (EBin op e1 e2, subs2, n2)
         _ -> error "Unable to anti-unify on mismatched expressions that aren't ellipsis variables, function applications, or binary operations."
 
-lkSub :: Exps -> Subs -> Maybe Exp
+lkSub :: [Exp] -> [Sub] -> Maybe Exp
 lkSub _ [] = Nothing
 lkSub exps' ((exps, sub):subs) = if exps' == exps then Just sub else lkSub exps' subs
 
-mkSub :: Exps -> Subs -> Int -> (Exp, Subs, Int)
+mkSub :: [Exp] -> [Sub] -> Int -> (Exp, [Sub], Int)
 mkSub exps subs n = let v = EVar $ mkVar n in (v, (exps, v) : subs, n + 1)
     where mkVar n = 'v' : show n
