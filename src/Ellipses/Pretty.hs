@@ -3,10 +3,10 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Pretty where
+module Ellipses.Pretty where
 
-import Syntax
-import SyntaxPatterns
+import Ellipses.Syntax
+import Ellipses.SyntaxPatterns
 
 import Prettyprinter
 import qualified Data.Text as T
@@ -17,6 +17,7 @@ instance Pretty Exp where
     pretty (ECon c)                 = pretty c
     pretty (EBin op e1 e2)          = pretty e1 <+> pretty op <+> pretty e2
     pretty (EAbs x e)               = backslash <> pretty x <+> "->" <+> pretty e
+    pretty (EApp e1@(EAbs {}) e2)   = parens (pretty e1) <+> pretty e2
     pretty (EApp e1 e2@(EBin {}))   = pretty e1 <+> parens (pretty e2)
     pretty (EApp e1 e2@(EApp {}))   = pretty e1 <+> parens (pretty e2)
     pretty (EApp e1 e2)             = pretty e1 <+> pretty e2
@@ -27,7 +28,7 @@ instance Pretty Exp where
 
 instance Pretty EExp where
     pretty (EESeg s)                = brackets $ hsep $ punctuate comma $ map pretty s
-    pretty (EEFold e1 op ek)        = pretty e1 <+> pretty op <+> "..." <+> pretty op <+> pretty ek
+    pretty (EEFold op e1 ek)        = pretty e1 <+> pretty op <+> "..." <+> pretty op <+> pretty ek
     pretty (EEVar x e)              = pretty x <> let e' = pretty e in (if length (show e') > 1 then braces else id) e'
 
 instance Pretty Seg where
@@ -37,11 +38,17 @@ instance Pretty Seg where
 instance Pretty Val where
     pretty (VNum n)                 = pretty n
     pretty (VList vs)               = brackets $ hsep $ punctuate comma $ map pretty vs
-    pretty (VCons c vs)             = pretty c <+> hsep (map pretty vs)
+    pretty (VCons c vs)             = pretty c <> if null vs then emptyDoc else space <> prettyCVals vs
     pretty (VCls env e)             = parens $ pretty env <> comma <+> pretty e
 
 prettyVals :: [Val] -> Doc ann
 prettyVals vs                       = hsep $ map pretty vs
+
+prettyCVals :: [Val] -> Doc ann
+prettyCVals vs                      = hsep $ map prettyCVal vs
+    where prettyCVal c@(VCons _ vs) 
+            | not $ null vs         = parens $ pretty c
+          prettyCVal x              = pretty x
 
 instance Pretty Bin where
     pretty Add                      = pretty (T.pack "+")
@@ -53,7 +60,7 @@ prettyAlt :: Alt -> Doc ann
 prettyAlt (p, e)                    = pretty p <+> "->" <+> pretty e
 
 prettyAlts :: [Alt] -> Doc ann
-prettyAlts alts                       = hsep $ punctuate semi (map prettyAlt alts)
+prettyAlts alts                     = hsep $ punctuate semi (map prettyAlt alts)
 
 instance Pretty Pat where
     pretty PAny                     = pretty (T.pack "_")

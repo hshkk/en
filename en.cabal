@@ -59,15 +59,16 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  
-        AntiUnification
-        Evaluator
-        Lexer
-        Operators
-        Parser
-        PatternInference
-        Pretty
-        Syntax
-        SyntaxPatterns
+        Ellipses
+        Ellipses.AntiUnification
+        Ellipses.Bins
+        Ellipses.Evaluator
+        Ellipses.Lexer
+        Ellipses.Parser
+        Ellipses.PatternInference
+        Ellipses.Pretty
+        Ellipses.Syntax
+        Ellipses.SyntaxPatterns
 
     -- Modules included in this library but not exported.
     -- other-modules:    
@@ -83,7 +84,7 @@ library
         text
 
     -- Directories containing source files.
-    hs-source-dirs:   src, src/phi, src/syn
+    hs-source-dirs:   src
 
     -- Base language which the package is written in.
     default-language: Haskell2010

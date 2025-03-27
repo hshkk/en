@@ -1,11 +1,15 @@
-module Evaluator where
+module Ellipses.Evaluator where
 
+import Control.Applicative (liftA2)
+import Data.List (transpose)
 import Data.Maybe (isJust, fromJust)
 
-import AntiUnification (phi)
-import Operators
-import Syntax
-import SyntaxPatterns
+import Ellipses.Bins
+import Ellipses.PatternInference
+import Ellipses.Syntax
+import Ellipses.SyntaxPatterns
+
+-- Evaluation rules:
 
 eval :: Env -> Exp -> Val
 -- Con
@@ -53,12 +57,13 @@ eval env (ECase e ((pk, ek):alts)) =
         if isJust envs then eval (fromJust envs ++ env) ek else eval env (ECase e alts)
 -- Ellipsis expressions!
 eval env (EExp e) = case e of
-    EESeg ss       -> VList (map (evalseg env) ss)
-    EEFold e1 o ek -> let p = phi [e1, ek] in eval env p -- TODO: Implement this!
-    EEVar x e      -> case lookup x env of
+    EESeg ss        -> VList (map (evalseg env) ss)
+    EEFold op e1 ek ->
+        let inf = cphi [e1, ek]
+            phi = fst inf
+            slc = map (slcToList env) (snd inf) in eval env $ foldWithK op phi slc
+    EEVar x e       -> case lookup x env of
         Just (VList vs) -> let n = arith $ eval env e in vs !! (n - 1)
-            where arith (VNum n) = n
-                  arith v = error $ show v ++ " isn't an arithmetic expression."
         Just _          -> error $ x ++ " isn't binded to a list."
         Nothing         -> error $ x ++ " isn't binded in the current environment."
 
@@ -66,13 +71,28 @@ evalseg :: Env -> Seg -> Val
 evalseg env (SSng e)     = eval env e
 evalseg env (SEll e1 ek) = VNum 0 -- TODO: Implement this!
 
-try :: Val -> Pat -> Maybe Env
-try v p = case p of
-    -- PVar
-    PVar x -> Just [(x, v)]
-    _      -> Just []
+-- Maps a given φ to a list of list slices, then collapses it into a single expression.
+phifold :: ([Exp] -> Exp) -> Exp -> [[Val]] -> Exp
+phifold f phi vss = f $ foldl EApp phi . map EVal <$> (transpose . cut) vss
+    where cut xss = map (take . minimum $ map length xss) xss
 
--- Matches a value against a pattern.
+foldWithK :: Bin -> Exp -> [[Val]] -> Exp
+foldWithK op = phifold (foldl1 $ EBin op)
+
+zipWithK :: Exp -> [[Val]] -> Exp
+zipWithK = phifold EList
+
+slcToList :: Env -> (Exp, Exp, Var) -> [Val]
+slcToList env (a, b, x) = case eval env (EVar x) of
+    VList vs -> slice (arith $ eval env a) (arith $ eval env b) vs
+    _ -> error $ x ++ " isn't binded to a list."
+
+arith :: Val -> Int
+arith (VNum n) = n
+arith v = error $ show v ++ " isn't an arithmetic expression."
+
+-- Pattern matching rules:
+
 pmatch :: Val -> Pat -> Maybe Env
 pmatch v p = try v p >>= \var -> case v of
     VNum n -> case p of
@@ -87,16 +107,21 @@ pmatch v p = try v p >>= \var -> case v of
         PVal v' -> case v' of
             VCons c' vs' -> if c == c' && vs == vs' then Just [] else Nothing
             _ -> Nothing
-        PCon c' ps -> if c == c' then concat <$> pmatchall vs ps else Nothing
+        PCon c' ps -> if c == c' then concat <$> pmatfold vs ps else Nothing
         PCons x xs -> case v of
-            VList vs -> if null vs then Nothing else ((<*>) . fmap (++)) (pmatch (head vs) x) (pmatch (VList $ tail vs) xs)
+            VList [] -> Nothing
+            VList vs -> liftA2 (++) (pmatch (head vs) x) (pmatch (VList $ tail vs) xs)
             _ -> Nothing
         PEll    {} -> Nothing   -- TODO: Implement this!
         _ -> Just var
     _ -> error "The given value isn't matchable to a pattern."
+    where
+        try :: Val -> Pat -> Maybe Env
+        try v (PVar x) = Just [(x, v)]
+        try _ _        = Just []
 
 -- Matches every argument of a constructor against the arguments of a constructor pattern.
-pmatchall :: [Val] -> [Pat] -> Maybe [Env]
-pmatchall [] [] = Just []
-pmatchall (v:vs) (p:ps) = (:) <$> pmatch v p <*> pmatchall vs ps
-pmatchall _ _ = Nothing
+pmatfold :: [Val] -> [Pat] -> Maybe [Env]
+pmatfold [] [] = Just []
+pmatfold (v:vs) (p:ps) = (:) <$> pmatch v p <*> pmatfold vs ps
+pmatfold _ _ = Nothing

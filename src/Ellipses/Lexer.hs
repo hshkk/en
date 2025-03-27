@@ -1,4 +1,4 @@
-module Lexer where
+module Ellipses.Lexer where
 
 import Text.Parsec.Language (haskell)
 import Text.Parsec.String (Parser)

@@ -1,4 +1,4 @@
-module Parser (repl, replWith, Repl (..)) where
+module Ellipses.Parser (repl, replWith, Repl (..)) where
 
 import Data.Char (isUpper)
 import Data.Data (Data(toConstr))
@@ -8,21 +8,24 @@ import Text.Parsec
 import Text.Parsec.Expr
 import Text.Parsec.String (Parser)
 
-import Evaluator (eval)
-import Lexer hiding (lexer)
-import Pretty ()
-import Syntax
-import SyntaxPatterns
+import Ellipses.Evaluator
+import Ellipses.Lexer hiding (lexer)
+import Ellipses.Pretty ()
+import Ellipses.Syntax
+import Ellipses.SyntaxPatterns
 
 type Decl = (Maybe Var, Exp)
 data Repl = EVTO | AST
 
 parseExp :: Parser Exp
-parseExp = buildExpressionParser tableBin $
-    choice [parseFix, parseApp, parseExp']
+parseExp = choice [parseBinExp]
+    where parseBinExp = buildExpressionParser tableBin $ choice [parseApplike, parseTermlike]
 
-parseExp' :: Parser Exp
-parseExp' = choice [parseAbs, parseLet, parseCase, parseVal]
+parseApplike :: Parser Exp
+parseApplike = choice [parseFix, parseApp]
+
+parseTermlike :: Parser Exp
+parseTermlike = choice [parseAbs, parseLet, parseCase, parseVal]
 
 parseVal :: Parser Exp
 parseVal = try parseLit <|> parseVar
@@ -30,14 +33,12 @@ parseVal = try parseLit <|> parseVar
 parseLit :: Parser Exp
 parseLit = choice
     [ EVal . VNum . read <$> many1 digit <* spaces
-    , EVal (VCons "True"  []) <$ reserved "True"
-    , EVal (VCons "False" []) <$ reserved "False"
-    , EVal <$> brackets parseList]
+    , brackets parseList]
 
-parseList :: Parser Val
+parseList :: Parser Exp
 parseList = do
-    vs <- sepBy parseExp (symbol ",")
-    return $ VList (map (eval []) vs)
+    exps <- sepBy parseExp (symbol ",")
+    return $ EList exps
 
 parseVar :: Parser Exp
 parseVar = do
@@ -53,13 +54,13 @@ parseAbs = do
     return $ EAbs x e
 
 parseApp :: Parser Exp
-parseApp = chainl1 (choice [parens parseExp, parseExp']) (EApp <$ spaces)
+parseApp = chainl1 (choice [parens parseExp, parseTermlike]) (EApp <$ spaces)
 
 parseFix :: Parser Exp
 parseFix = do
     reserved "fix"
-    e1 <- choice $ map parens [parseExp, parseExp']
-    e2 <- choice [parens parseExp, parseExp']
+    e1 <- choice $ map parens [parseExp, parseTermlike]
+    e2 <- choice [parens parseExp, parseTermlike]
     return $ EFix e1 e2
 
 tableBin :: OperatorTable String () Identity Exp
@@ -102,9 +103,8 @@ parsePattern :: Parser Pat
 parsePattern = choice
     [ symbol "_" >> return PAny
     , PVal . VNum . read <$> many1 digit <* spaces
-    , PVal (VCons "True"  []) <$ reserved "True"
-    , PVal (VCons "False" []) <$ reserved "False"
-    , PVal <$> brackets parseList
+    -- Temporarily, only list literals are allowed.
+    , PVal <$> brackets (sepBy parseExp (symbol ",") >>= \exps -> return $ VList $ map (eval []) exps)
     , idn >>= \x ->
         if not (null x) && isUpper (head x)
         then many parsePattern >>= \ps -> return $ PCon x ps
