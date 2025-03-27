@@ -45,11 +45,11 @@ One other remark to make is that some types of expressions cannot be anti-unifie
 [x, ..., y]
 ```
 
-As a result, the current implementation only allows anti-unification over mismatched function applications, fixpoint operations,  binary operations, and ellipsis variables. And even then, for a given part of an expression, the referenced list (for ellipsis variable anti-unification) and the constituent operation (for binary operation expression anti-unification) may not differ. Respectively, expressions like `[x1, ..., yn]` and `[x1 + 1, ..., xn - 1]` are invalid, as the elision is ambiguous. 
+As a result, the current implementation only allows anti-unification over mismatched function applications (which includes constructors), fixpoint operations,  binary operations, and ellipsis variables. And even then, for a given part of an expression, the referenced list (for anti-unification over ellipsis variables) and the constituent operation (for anti-unification over binary operation expressions) may not differ. Respectively, expressions like `[x1, ..., yn]` and `[x1 + 1, ..., xn - 1]` are invalid, as the elision is ambiguous. 
 
 However, please note that expressions like `zip [x1, ..., xn] [y1, ..., ym] = [(x1, y1), ..., (xn, ym)]` are valid, since the two lists `x` and `y` are referenced in the same part of each constituent expression. However, a related (and critical) question is what the semantics of `(xn, ym)` should be when `n ≠ m`. 
 
-Currently, the list length ends up being the smallest of `n` and `m` due to the `zipWith`-like implementation of `φfold` explained later in this document.
+Currently, the list length ends up being the smallest of `n` and `m` due to the `zipWith`-like implementation of element generation explained later in this document.
 
 ```haskell
 zip [x1, ..., xn] [y1, ..., ym] = [(x1, y1), ..., (xn, ym)]
@@ -82,6 +82,12 @@ neighbors [x1, ..., xn] = [(x1, x2), ..., (x{n - 1}, xn)]
 ς* = [(1, n - 1, x), (2, n, x)]
 ```
 
+```
+zip [x1, ..., xn] [y1, ..., ym] = [(x1, y1), ..., (xn, ym)]
+
+ς* = [(1, n, x), (1, m, y)]
+```
+
 An inference is represented as a tuple `Φ = (φ, ς*)`.
 
 ### Element generation
@@ -90,7 +96,7 @@ An inference is represented as a tuple `Φ = (φ, ς*)`.
 
 The terminal step of the ellipsis expression evaluation process is to generate the elided elements. We can fold `φ` over the inferred a/b slices `ς*` (which are first converted to the sublists they refer to) to yield a list containing every element, as outlined in the `Ellipses.PatternInference` module (albeit with different variable names). The resultant list can then be additionally processed to transform it into a single expression.
 
-Type synonyms are employed to further clarify what `φfold` does; their original values are included below.
+Type synonyms are employed to further clarify what `φfold` does; the original types are included below.
 
 ```haskell
 type Phi = Exp
