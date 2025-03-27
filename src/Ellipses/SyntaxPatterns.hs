@@ -35,15 +35,15 @@ pattern VNum n <- (intify -> Just n)
     where VNum n = peanoify n
 
 intify :: Val -> Maybe Int
+intify (VCons "Succ" n)  = (intify =<< listToMaybe n) >>= \k -> return (k + 1)
+intify (VCons "Pred" n)  = (intify =<< listToMaybe n) >>= \k -> return (k - 1)
 intify (VCons "Zero" []) = Just 0
-intify (VCons "Succ" n)  = (intify =<< listToMaybe n) >>= \k -> return $  1 + k
-intify (VCons "Pred" n)  = (intify =<< listToMaybe n) >>= \k -> return $ -1 + k
 intify _ = Nothing
 
 peanoify :: Int -> Val
-peanoify 0         = VCons "Zero" []
 peanoify n | n > 0 = VCons "Succ" [peanoify $ n - 1]
-peanoify n         = VCons "Pred" [peanoify $ n + 1]
+peanoify n | n < 0 = VCons "Pred" [peanoify $ n + 1]
+peanoify _         = VCons "Zero" []
 
 -- Shorthand patterns for constructors as expressions.
 
@@ -83,5 +83,5 @@ pattern EList exps <- (expify -> Just exps)
 -- as the companion pattern synonym doesn't produce ellipsis expressions.
 expify :: Exp -> Maybe [Exp]
 expify (EExp (EESeg [])) = Just []
-expify (EExp (EESeg ((SSng x):xs))) = (x:) <$> expify (EExp $ EESeg xs)
+expify (EExp (EESeg ((SSng e):ss))) = (e:) <$> expify (EExp $ EESeg ss)
 expify _ = Nothing

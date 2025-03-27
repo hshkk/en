@@ -27,7 +27,7 @@ instance Pretty Exp where
     pretty (EExp e)                 = pretty e
 
 instance Pretty EExp where
-    pretty (EESeg s)                = brackets $ hsep $ punctuate comma $ map pretty s
+    pretty (EESeg ss)               = brackets $ hsep $ punctuate comma $ map pretty ss
     pretty (EEFold op e1 ek)        = pretty e1 <+> pretty op <+> "..." <+> pretty op <+> pretty ek
     pretty (EEVar x e)              = pretty x <> let e' = pretty e in (if length (show e') > 1 then braces else id) e'
 
