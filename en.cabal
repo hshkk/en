@@ -114,4 +114,6 @@ test-suite en-test
     -- Test dependencies.
     build-depends:
         base ^>=4.17.2.1,
+        HUnit ^>=1.6,
+        prettyprinter,
         en

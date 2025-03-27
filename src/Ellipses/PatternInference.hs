@@ -1,6 +1,6 @@
 module Ellipses.PatternInference (
     cphi, 
-    foldOverK, zipWithK,
+    foldOverK, zipWithK
 ) where
 
 import Data.Bifunctor (bimap)

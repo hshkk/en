@@ -1,6 +1,6 @@
 ## Documentation of ellipsis expression evaluation
 
-*Previously updated: 26/3/25*
+*Previously updated: 27/3/25*
 
 ---
 
@@ -127,10 +127,12 @@ From anti-unification and pattern inference, the following inference is produced
 `φfold` proceeds as follows, with some constructor names elided for readability. (Notably excluding `EList` and `VList`, as their types differ from Haskell lists of values/expressions.) Please note that the `EList` constructor is employed as an argument to `φfold` to yield a list in the end, since `[x1 + x2, ..., x{n - 1} + xn]` is a list expression.
 
 ```haskell
--- At the current point of evaluation, f = EList, φ = \v1 -> \v2 -> v1 + v2, and ς* is made up of list slices ς1 and ς2 which contain values.
+-- At the current point of evaluation, f = EList, φ = \v1 -> \v2 -> v1 + v2, 
+-- and ς* is made up of list slices ς1 and ς2 which contain values.
 > φfold EList φ ς*
 
--- cut intends to replicate the behavior of zipWith by cutting the length of every slice with respect to the shortest slice. Since every slice is the same length in this example, nothing happens.
+-- cut intends to replicate the behavior of zipWith by cutting the length of every slice with respect to the shortest slice. 
+-- Since every slice is the same length in this example, nothing happens.
 cut ς* ~> [[1, 2, 3], [2, 3, 4]] :: [Slice]
 
 -- ς* is then rearranged so that each constituent list is representative of the arguments passed together to φ.  
@@ -142,7 +144,9 @@ map EVal <$> (transpose . cut) ς* ~> [[1, 2], [2, 3], [3, 4]] :: [[Exp]]
 -- φ is then folded over each constituent list, generating the complete list of elements, including those elided by an ellipsis.
 foldl EApp φ . map EVal <$> (transpose . cut) ς* ~> [φ 1 2, φ 2 3, φ 3 4] :: [Exp]
 
--- The list of expressions is then converted to a single expression representing a list. The ellipsis expression evaluation process is complete, and the resultant expression may now be fully evaluated in the usual manner.
+-- The list of expressions is then converted to a single expression representing a list. 
+-- The ellipsis expression evaluation process is complete, 
+-- and the resultant expression may now be fully evaluated in the usual manner.
 f $ foldl EApp φ . map EVal <$> (transpose . cut) ς* ~> EList [φ 1 2, φ 2 3, φ 3 4] :: Exp
 
 ... ~> VList [3, 5, 7] :: Val
