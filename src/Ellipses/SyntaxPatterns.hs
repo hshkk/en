@@ -6,6 +6,7 @@ module Ellipses.SyntaxPatterns (
     pattern (:-:),
     pattern (:*:),
     pattern (:::),
+    pattern ENum,
     pattern VNum,
     pattern ECons,
     pattern EList,
@@ -29,6 +30,21 @@ pattern x :*: y = EBin Mul x y
 
 pattern (:::) :: Exp -> Exp -> Exp
 pattern x ::: y = EBin Cons x y
+
+pattern ENum :: Int -> Exp
+pattern ENum n <- (intify' -> Just n)
+    where ENum n = peanoify' n
+
+intify' :: Exp -> Maybe Int
+intify' (ECons "Succ" n)  = (intify' =<< listToMaybe n) >>= \k -> return (k + 1)
+intify' (ECons "Pred" n)  = (intify' =<< listToMaybe n) >>= \k -> return (k - 1)
+intify' (ECons "Zero" []) = Just 0
+intify' _ = Nothing
+
+peanoify' :: Int -> Exp
+peanoify' n | n > 0 = ECons "Succ" [peanoify' $ n - 1]
+peanoify' n | n < 0 = ECons "Pred" [peanoify' $ n + 1]
+peanoify' _         = ECons "Zero" []
 
 pattern VNum :: Int -> Val
 pattern VNum n <- (intify -> Just n)

@@ -32,8 +32,9 @@ phi [] e = e
 phi ((_, EVar x):vs) e = phi vs (EAbs x e)
 phi _ _ = error "An non-variable was declared as a substitution marker."
 
--- ς takes a list of expressions a substitution was defined for and constructs a list slice using the first two ellipsis variables in the list. 
+-- ς takes a list of expressions a substitution was defined for and constructs a list slice using the first two expressions in the list. 
 -- (TODO: This behavior could be incorrect!)
 sigma :: [Exp] -> ABSlice
 sigma ((EExp (EEVar x n)):(EExp (EEVar x' n')):_) | x == x' = (n, n', x)
+sigma (e1:e2:_) = (e1, e2, "_")
 sigma _ = error "Insufficient information was provided to construct a list slice."

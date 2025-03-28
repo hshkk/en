@@ -84,9 +84,15 @@ infer env e1 ek f =
 
 -- Processes an a/b-slice, yielding the corresponding sublist.
 render :: Env -> ABSlice -> Slice
+render env (a, b, "_") = case (eval env a, eval env b) of
+    (VNum m, VNum n) -> map VNum $ range m n
+    _ -> error $ show a ++ " and " ++ show b ++ " aren't arithmetic expressions."
 render env (a, b, x) = case eval env (EVar x) of
     VList vs -> slice (num $ eval env a) (num $ eval env b) vs
     _ -> error $ x ++ " isn't binded to a list."
+
+range :: Int -> Int -> [Int]
+range m n = [m, m + signum (n - m)..n]
 
 slice :: Int -> Int -> [a] -> [a]
 slice a b | all (> 0) [a, b] = if a > b then reverse . slice' b a else slice' a b

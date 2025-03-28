@@ -13,8 +13,9 @@ tests =
         maptests,
         ziptests
     ]
-testinfo :: String -> Exp -> [String] -> [Exp] -> String
-testinfo f x pars exps =
+    
+testm :: String -> Exp -> [String] -> [Exp] -> String
+testm f x pars exps =
     "Testing " ++ f ++ " = " ++ (show . pretty) x ++ " where " ++
     intercalate ", " (zipWith (\p e -> p ++ " = " ++ (show . pretty) e) pars exps) ++ "."
 
@@ -140,9 +141,9 @@ emapl3r =
 maptests :: Test
 maptests =
     TestList [
-        TestCase (assertEqual (testinfo "map" emap ["f", "x"] [emapl1, l1]) (eval [] emapl1r) (eval [] (EApp (EApp emap emapl1) l1))),
-        TestCase (assertEqual (testinfo "map" emap ["f", "x"] [emapl2, l2]) (eval [] emapl2r) (eval [] (EApp (EApp emap emapl2) l2))),
-        TestCase (assertEqual (testinfo "map" emap ["f", "x"] [emapl3, l3]) (eval [] emapl3r) (eval [] (EApp (EApp emap emapl3) l3)))
+        TestCase (assertEqual (testm "map" emap ["f", "x"] [emapl1, l1]) (eval [] emapl1r) (eval [] (EApp (EApp emap emapl1) l1))),
+        TestCase (assertEqual (testm "map" emap ["f", "x"] [emapl2, l2]) (eval [] emapl2r) (eval [] (EApp (EApp emap emapl2) l2))),
+        TestCase (assertEqual (testm "map" emap ["f", "x"] [emapl3, l3]) (eval [] emapl3r) (eval [] (EApp (EApp emap emapl3) l3)))
     ]
 
 -- zip [] _ = []
@@ -187,5 +188,5 @@ ezipl1r =
 ziptests :: Test
 ziptests =
     TestList [
-        TestCase (assertEqual (testinfo "zip" emap ["x", "y"] [l1, l1]) (eval [] ezipl1r) (eval [] (EApp (EApp ezip l1) l1)))
+        TestCase (assertEqual (testm "zip" emap ["x", "y"] [l1, l1]) (eval [] ezipl1r) (eval [] (EApp (EApp ezip l1) l1)))
     ]
