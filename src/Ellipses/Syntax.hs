@@ -58,6 +58,7 @@ data Bin
     | Sub
     | Mul
     | Cons
+    | Cat
     deriving (Show, Eq, Data)
 
 data Pat 

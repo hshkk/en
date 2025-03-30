@@ -18,3 +18,7 @@ import Ellipses.SyntaxPatterns
 (>:<) :: Val -> Val -> Val
 (>:<) v (VList vs) = VList $ v : vs
 (>:<) _ _ = error "(:) is undefined for the given values."
+
+(>#<) :: Val -> Val -> Val
+(>#<) (VList vs) (VList vs') = VList $ vs ++ vs'
+(>#<) _ _ = error "(++) is undefined for the given values." 

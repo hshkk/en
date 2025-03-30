@@ -64,10 +64,11 @@ parseFix = do
     return $ EFix e1 e2
 
 tableBin :: OperatorTable String () Identity Exp
-tableBin = [[ifxl $ parseBin "+" Add
-           , ifxl $ parseBin "-" Sub
-           , ifxl $ parseBin "*" Mul
-           , ifxr $ parseBin ":" Cons]]
+tableBin = [[ifxl $ parseBin "+"  Add
+           , ifxl $ parseBin "-"  Sub
+           , ifxl $ parseBin "*"  Mul
+           , ifxr $ parseBin ":"  Cons
+           , ifxl $ parseBin "++" Cat]]
     where ifxl x = Infix x AssocLeft
           ifxr x = Infix x AssocRight
 

@@ -14,6 +14,7 @@ import qualified Data.Text as T
 instance Pretty Exp where
     pretty (EVar x)                 = pretty x
     pretty (EVal v)                 = pretty v
+    pretty (ENum n)                 = pretty n
     pretty (ECon c)                 = pretty c
     pretty (EBin op e1 e2)          = pretty e1 <+> pretty op <+> pretty e2
     pretty (EAbs x e)               = backslash <> pretty x <+> "->" <+> pretty e
@@ -55,6 +56,7 @@ instance Pretty Bin where
     pretty Sub                      = pretty (T.pack "-")
     pretty Mul                      = pretty (T.pack "*")
     pretty Cons                     = pretty (T.pack ":")
+    pretty Cat                      = pretty (T.pack "++")
 
 prettyAlt :: Alt -> Doc ann
 prettyAlt (p, e)                    = pretty p <+> "->" <+> pretty e

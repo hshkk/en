@@ -27,6 +27,7 @@ eval env (EBin op e1 e2) =
             Sub  -> v1 >-< v2
             Mul  -> v1 >*< v2
             Cons -> v1 >:< v2
+            Cat  -> v1 >#< v2
             _ -> error $ "The binary operation " ++ show op ++ " lacks a definition."
 -- Abs
 eval env xe@(EAbs {}) = VCls env xe
@@ -58,13 +59,15 @@ eval env (ECase e ((pk, ek):alts)) =
         if isJust env' then eval (fromJust env' ++ env) ek else eval env (ECase e alts)
 -- Ellipsis expressions!
 eval env (EExp e) = case e of
-    EESeg ss -> VList (cat $ map (evals env) ss)
+    EESeg ss -> let vs = map (evals env) ss in VList . cat $ vs
         where
             cat :: [Val] -> [Val]
             cat [] = []
             cat ((VList vs):vls) = vs ++ cat vls
             cat v = v
-    EEFold op e1 ek -> infer env e1 ek $ foldOverK op
+    EEFold op e1 ek -> case eval env (EExp $ EESeg [SEll e1 ek]) of
+        VList vs -> eval env $ foldl1 (EBin op) (map EVal vs)
+        _ -> error "This shouldn't happen!"
     EEVar x e -> case lookup x env of
         Just (VList vs) -> let n = num $ eval env e in vs !! (n - 1)
         Just _          -> error $ x ++ " isn't binded to a list."
@@ -74,25 +77,27 @@ eval env (EExp e) = case e of
 
 evals :: Env -> Seg -> Val
 evals env (SSng e)     = VList [eval env e]
-evals env (SEll e1 ek) = infer env e1 ek zipWithK
-
-infer :: Env -> Exp -> Exp -> (Phi -> [Slice] -> Exp) -> Val
-infer env e1 ek f =
+evals env (SEll e1 ek) = 
     let inf = cphi [e1, ek]
         phi = fst inf
-        slc = map (render env) (snd inf) in eval env $ f phi slc
+        -- slc is [] if e1 and ek are the same expression, in which case φ will be a constant.
+        -- This edge case is accounted for in the definition of zipWithK.
+        slc = map (render env) (snd inf) in eval env $ zipWithK phi slc
 
 -- Processes an a/b-slice, yielding the corresponding sublist.
 render :: Env -> ABSlice -> Slice
+-- Integer interpolation:
+-- (Rendering an a/b-slice referencing "_" involves performing a range interpolation.)
 render env (a, b, "_") = case (eval env a, eval env b) of
     (VNum m, VNum n) -> map VNum $ range m n
     _ -> error $ show a ++ " and " ++ show b ++ " aren't arithmetic expressions."
+-- List slicing:
 render env (a, b, x) = case eval env (EVar x) of
     VList vs -> slice (num $ eval env a) (num $ eval env b) vs
     _ -> error $ x ++ " isn't binded to a list."
 
 range :: Int -> Int -> [Int]
-range m n = [m, m + signum (n - m)..n]
+range m n = if m == n then [m] else [m, m + signum (n - m)..n]
 
 slice :: Int -> Int -> [a] -> [a]
 slice a b | all (> 0) [a, b] = if a > b then reverse . slice' b a else slice' a b

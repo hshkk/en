@@ -2,7 +2,7 @@ module Ellipses.AntiUnification (antiunify, Sub) where
 
 import Data.Data (toConstr)
 import Data.Function (on)
-import Data.List (nub)
+import Data.List (nub, transpose, foldl')
 
 import Ellipses.Syntax
 
@@ -21,18 +21,18 @@ antiunify' exps subs n =
         -- (7)
         _ |  all (== e) exps -> (e, subs, n)
         -- (8) with generalization over constructor arguments.
-        _ |  all (on (==) toConstr e) exps -> antifold exps subs n
+        _ |  toConstr e /= toConstr (EVar "x") && all (on (==) toConstr e) exps -> antifold exps subs n
         -- (9)
         _ |  Just expM <- lkSub exps subs -> (expM, subs, n)
         -- (10)
         _ -> mkSub exps subs n
 
--- Anti-unification over constructor arguments, assuming constructor homogeneity.
+-- Anti-unification over expressions, assuming constructor homogeneity.
 antifold :: [Exp] -> [Sub] -> Int -> (Exp, [Sub], Int)
 antifold [] _ _ = error "An empty sequence of expressions isn't allowed."
-antifold exps subs n
-    = case head exps of
-        EExp (EEVar x _) -> if all (x ==) [x' | EExp (EEVar x' _) <- exps] then mkSub exps subs n else error "Unable to anti-unify on mismatched ellipsis variables."
+antifold exps subs n =
+    let inner = [e | EExp e <- exps] in case head exps of
+        EExp e | all (on (==) toConstr e) inner -> antifold' inner subs n
         -- TODO: Consolidating the similar logic below may involve generically folding over constructor arguments.
         EApp {} -> let (e1, subs1, n1) = antiunify' [e1 | EApp e1 _ <- exps] subs n
                        (e2, subs2, n2) = antiunify' [e2 | EApp _ e2 <- exps] subs1 n1 in
@@ -44,7 +44,39 @@ antifold exps subs n
                        (e1, subs1, n1) = antiunify' [e1 | EBin _ e1 _ <- exps] subs n
                        (e2, subs2, n2) = antiunify' [e2 | EBin _ _ e2 <- exps] subs1 n1 in
                    (EBin op e1 e2, subs2, n2)
-        _ -> error "Unable to anti-unify on mismatched expressions that aren't ellipsis variables, function applications, or binary operations."
+        _ -> error "Unable to anti-unify on mismatched expressions that aren't ellipsis expressions, function applications, or binary operations."
+
+-- Anti-unification over ellipsis expressions, assuming constructor homogeneity.
+antifold' :: [EExp] -> [Sub] -> Int -> (Exp, [Sub], Int)
+antifold' [] _ _ = error "An empty sequence of ellipsis expressions isn't allowed."
+antifold' eexps subs n =
+    let inner = [ss | EESeg ss <- eexps]; exps = map EExp eexps in case head eexps of
+        EESeg  {} | all ((== length (head inner)) . length) inner && 
+                    all ((and . zipWith (==) (map toConstr $ head inner)) . map toConstr) inner ->
+            let (ssk, subsk, nk) = foldl' step ([], subs, n) (transpose inner) in
+                (EExp $ EESeg ssk, subsk, nk)
+                where
+                    -- Defines the logic of folding anti-unification over an indeterminate number of list segments.
+                    -- TODO: It would be nice to generalize this logic and use it for antifold!
+                    step :: ([Seg], [Sub], Int) -> [Seg] -> ([Seg], [Sub], Int)
+                    step (ssi, subsi, ni) ssi' =
+                        let (ssj, subsj, nj) = antifolds ssi' subsi ni in (ssi ++ [ssj], subsj, nj)
+        EEFold {} -> let op = case nub [op | EEFold op _ _ <- eexps] of [op] -> op; _ -> error "Unable to anti-unify on mismatched binary operations."
+                         (e1, subs1, n1) = antiunify' [e1 | EEFold _ e1 _ <- eexps] subs n
+                         (e2, subs2, n2) = antiunify' [e2 | EEFold _ _ e2 <- eexps] subs1 n1 in
+                     (EExp $ EEFold op e1 e2, subs2, n2)
+        EEVar x _ -> if all (x ==) [x' | EEVar x' _ <- eexps] then mkSub exps subs n else error "Unable to anti-unify on mismatched ellipsis variables."
+        _ -> error "Unable to anti-unify on mismatched ellipsis expressions."
+
+-- Anti-unification over list segments, assuming constructor homogeneity.
+antifolds :: [Seg] -> [Sub] -> Int -> (Seg, [Sub], Int)
+antifolds [] _ _ = error "An empty sequence of list segments isn't allowed."
+antifolds ss subs n =
+    case head ss of
+        SSng {} -> let (e1, subs1, n1) = antiunify' [e | SSng e <- ss] subs n in (SSng e1, subs1, n1)
+        SEll {} -> let (e1, subs1, n1) = antiunify' [e1 | SEll e1 _ <- ss] subs n
+                       (e2, subs2, n2) = antiunify' [e2 | SEll _ e2 <- ss] subs1 n1 in
+                   (SEll e1 e2, subs2, n2)
 
 lkSub :: [Exp] -> [Sub] -> Maybe Exp
 lkSub _ [] = Nothing
