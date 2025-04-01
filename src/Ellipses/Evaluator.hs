@@ -5,6 +5,7 @@ import Data.Maybe (isJust, fromJust)
 
 import Ellipses.Bins
 import Ellipses.PatternInference
+import Ellipses.Pretty (prettys)
 import Ellipses.Syntax
 import Ellipses.SyntaxPatterns
 
@@ -40,7 +41,7 @@ eval env (EApp e1 e2) =
             VCons c vs -> VCons c (vs ++ [v'])
             -- AppF
             VCls env' (EAbs x e') -> eval ((x, v') : env') e'
-            _ -> error $ show e1 ++ " is unable to be applied to " ++ show e2 ++ "."
+            _ -> error $ prettys e1 ++ " is unable to be applied to " ++ prettys e2 ++ "."
 -- AppFix
 eval env (EFix e1 e2) = case eval env e1 of
     -- TODO: Rewrite this!
@@ -48,7 +49,7 @@ eval env (EFix e1 e2) = case eval env e1 of
         where
             fix :: Exp
             fix = EAbs "f" (EApp (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))) (EAbs "x" (EApp (EVar "f") (EApp (EVar "x") (EVar "x")))))
-    _ -> error $ show e1 ++ " isn't a closure."
+    _ -> error $ prettys e1 ++ " isn't a closure."
 -- Let
 eval env (ELet x e1 e2) = let v' = eval env e1 in eval ((x, v') : env) e2
 -- Case
@@ -88,9 +89,9 @@ evals env (SEll e1 ek) =
 render :: Env -> ABSlice -> Slice
 -- Integer interpolation:
 -- (Rendering an a/b-slice referencing "_" involves performing a range interpolation.)
-render env (a, b, "_") = case (eval env a, eval env b) of
-    (VNum m, VNum n) -> map VNum $ range m n
-    _ -> error $ show a ++ " and " ++ show b ++ " aren't arithmetic expressions."
+render env (a, b, "_") = 
+    let m = num $ eval env a
+        n = num $ eval env b in map VNum $ range m n
 -- List slicing:
 render env (a, b, x) = case eval env (EVar x) of
     VList vs -> slice (num $ eval env a) (num $ eval env b) vs
@@ -106,7 +107,7 @@ slice _ _ = error "a >= 1, b >= 1 must hold for a list slice (a, b, x)."
 
 num :: Val -> Int
 num (VNum n) = n
-num v = error $ show v ++ " isn't an arithmetic expression."
+num v = error $ prettys v ++ " isn't an arithmetic expression."
 
 -- Pattern matching rules:
 

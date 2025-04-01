@@ -3,14 +3,13 @@ module Ellipses.Parser (repl, replWith, Repl (..)) where
 import Data.Char (isUpper)
 import Data.Data (Data(toConstr))
 import Data.Functor.Identity (Identity)
-import Prettyprinter (Pretty(..))
 import Text.Parsec
 import Text.Parsec.Expr
 import Text.Parsec.String (Parser)
 
 import Ellipses.Evaluator
 import Ellipses.Lexer hiding (lexer)
-import Ellipses.Pretty ()
+import Ellipses.Pretty (prettys)
 import Ellipses.Syntax
 import Ellipses.SyntaxPatterns
 
@@ -144,7 +143,7 @@ repl' decls st = do
         -- Displays the outermost exp./val. constructor of the parsed/evaluated expression respectively.
         ":evto" -> repl' decls EVTO
         -- Displays the list of local declarations made within the current REPL session.
-        ":d"    -> print (pretty decls) >> repl' decls st
+        ":d"    -> print (prettys decls) >> repl' decls st
         -- Ends the current REPL session.
         ":q"    -> return ()
         -- Restarts the REPL with an empty list of local declarations.
@@ -156,7 +155,7 @@ repl' decls st = do
                     let e = snd decl
                     let v = eval env e
                     case st of
-                        EVTO -> putStrLn $ show (pretty v) ++ " : " ++ show (toConstr e) ++ " => " ++ show (toConstr v)
-                        AST  -> putStrLn $ show (pretty v) ++ " <~ " ++ show e
+                        EVTO -> putStrLn $ prettys v ++ " : " ++ show (toConstr e) ++ " => " ++ show (toConstr v)
+                        AST  -> putStrLn $ prettys v ++ " <~ " ++ show e
                     let decls' = maybe decls (\x -> (decl :) $ filter ((/= Just x) . fst) decls) (fst decl)
                     repl' decls' st

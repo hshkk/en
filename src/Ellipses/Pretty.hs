@@ -3,13 +3,13 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Ellipses.Pretty where
+module Ellipses.Pretty (prettys) where
+
+import qualified Data.Text as T
+import Prettyprinter
 
 import Ellipses.Syntax
 import Ellipses.SyntaxPatterns
-
-import Prettyprinter
-import qualified Data.Text as T
 
 instance Pretty Exp where
     pretty (EVar x)                 = pretty x
@@ -47,7 +47,8 @@ prettyVals vs                       = hsep $ map pretty vs
 
 prettyCVals :: [Val] -> Doc ann
 prettyCVals vs                      = hsep $ map prettyCVal vs
-    where prettyCVal c@(VCons _ vs) 
+    where prettyCVal (VNum n)       = pretty n
+          prettyCVal c@(VCons _ vs) 
             | not $ null vs         = parens $ pretty c
           prettyCVal x              = pretty x
 
@@ -75,3 +76,6 @@ instance Pretty Pat where
 
 prettyPats :: [Pat] -> Doc ann
 prettyPats ps                       = hsep $ map pretty ps
+
+prettys :: Pretty a => a -> String
+prettys = show . pretty
